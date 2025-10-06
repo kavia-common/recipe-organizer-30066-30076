@@ -17,18 +17,26 @@ export default function RecipeDetail() {
     let mounted = true;
     (async () => {
       try {
-        // Placeholder: when backend available, replace with real call
-        // const data = await api.get(endpoints.recipes.byId(id));
+        const data = await api.get(endpoints.recipes.byId(id));
+        const normalized = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          category: data?.category?.name || '',
+          duration_minutes: 0,
+          ingredients: (data.ingredients || '').split('\n').filter(Boolean)
+        };
+        if (mounted) setRecipe(normalized);
+      } catch (e) {
+        // Fallback placeholder
         const data = { id, title: 'Sample Recipe', description: 'Detailed instructions...', category: 'Lunch', duration_minutes: 30, ingredients: ['eggs', 'salt'] };
         if (mounted) setRecipe(data);
-      } catch (e) {
-        // No-op for now
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="container" style={{ padding: 24 }}>Loading...</div>;
   if (!recipe) return <div className="container" style={{ padding: 24 }}>Recipe not found.</div>;

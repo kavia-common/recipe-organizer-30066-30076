@@ -17,14 +17,16 @@ export function AuthProvider({ children }) {
   const api = useMemo(() => createApiWithToken(() => token), [token]);
 
   const login = async (email, password) => {
-    // const res = await api.post(endpoints.auth.login, { email, password });
-    // setToken(res?.access_token);
-    // Placeholder demo:
-    setToken('demo-token');
+    const res = await api.post(endpoints.auth.login, { email, password });
+    if (res?.access_token) setToken(res.access_token);
+    return true;
   };
 
   const register = async (name, email, password) => {
-    // await api.post(endpoints.auth.register, { name, email, password });
+    // Backend expects {email, password, full_name?}
+    const res = await api.post(endpoints.auth.register, { email, password, full_name: name });
+    // Optionally auto-login with returned token
+    if (res?.access_token) setToken(res.access_token);
     return true;
   };
 

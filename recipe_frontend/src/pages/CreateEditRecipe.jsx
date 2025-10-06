@@ -16,35 +16,58 @@ export default function CreateEditRecipe({ mode = 'create' }) {
   const [form, setForm] = useState({
     title: '',
     description: '',
-    category: '',
-    duration_minutes: 0
+    instructions: '',
+    ingredients: '',
+    category_id: '',
+    tag_ids: []
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (isEdit && id) {
-      // Placeholder: fetch recipe by id
-      setForm({ title: 'Sample Recipe', description: 'Edit me', category: 'Lunch', duration_minutes: 20 });
-    }
-  }, [isEdit, id]);
+    (async () => {
+      if (isEdit && id) {
+        try {
+          const data = await api.get(endpoints.recipes.byId(id));
+          setForm({
+            title: data.title || '',
+            description: data.description || '',
+            instructions: data.instructions || '',
+            ingredients: data.ingredients || '',
+            category_id: data?.category?.id || '',
+            tag_ids: (data?.tags || []).map(t => t.id)
+          });
+        } catch {
+          // fallback placeholder
+          setForm({ title: 'Sample Recipe', description: 'Edit me', instructions: 'Do stuff', ingredients: 'Salt', category_id: '', tag_ids: [] });
+        }
+      }
+    })();
+  }, [isEdit, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: name === 'duration_minutes' ? Number(value) : value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        title: form.title,
+        description: form.description || null,
+        instructions: form.instructions,
+        ingredients: form.ingredients,
+        category_id: form.category_id ? Number(form.category_id) : null,
+        tag_ids: Array.isArray(form.tag_ids) ? form.tag_ids : []
+      };
       if (isEdit) {
-        // await api.put(endpoints.recipes.byId(id), form);
+        await api.patch(endpoints.recipes.byId(id), payload);
       } else {
-        // await api.post(endpoints.recipes.base, form);
+        await api.post(endpoints.recipes.base, payload);
       }
       navigate('/');
     } catch (err) {
-      // handle error toast later
       // eslint-disable-next-line no-console
       console.error(err);
     } finally {
@@ -62,22 +85,36 @@ export default function CreateEditRecipe({ mode = 'create' }) {
       <div style={{ height: 12 }} />
 
       <label>Description</label>
-      <textarea className="textarea" name="description" value={form.description} onChange={onChange} rows={5} placeholder="Describe the steps..." />
+      <textarea className="textarea" name="description" value={form.description} onChange={onChange} rows={3} placeholder="Short description (optional)" />
+
+      <div style={{ height: 12 }} />
+
+      <label>Instructions</label>
+      <textarea className="textarea" name="instructions" value={form.instructions} onChange={onChange} rows={6} required placeholder="Describe the steps..." />
+
+      <div style={{ height: 12 }} />
+
+      <label>Ingredients (one per line)</label>
+      <textarea className="textarea" name="ingredients" value={form.ingredients} onChange={onChange} rows={5} required placeholder="e.g. 2 eggs&#10;1 tsp salt" />
 
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr', marginTop: 12 }}>
         <div>
-          <label>Category</label>
-          <select className="select" name="category" value={form.category} onChange={onChange}>
-            <option value="">Select</option>
-            <option>Breakfast</option>
-            <option>Lunch</option>
-            <option>Dinner</option>
-            <option>Dessert</option>
-          </select>
+          <label>Category ID (optional)</label>
+          <input className="input" name="category_id" value={form.category_id} onChange={onChange} placeholder="e.g. 1" />
         </div>
         <div>
-          <label>Duration (minutes)</label>
-          <input className="input" type="number" min="0" name="duration_minutes" value={form.duration_minutes} onChange={onChange} />
+          <label>Tag IDs (comma separated, optional)</label>
+          <input
+            className="input"
+            name="tag_ids"
+            value={Array.isArray(form.tag_ids) ? form.tag_ids.join(',') : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              const ids = val.split(',').map(s => s.trim()).filter(Boolean).map(n => Number(n)).filter(n => !Number.isNaN(n));
+              setForm(prev => ({ ...prev, tag_ids: ids }));
+            }}
+            placeholder="e.g. 1,2,3"
+          />
         </div>
       </div>
 

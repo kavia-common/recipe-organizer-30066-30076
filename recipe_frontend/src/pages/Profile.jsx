@@ -13,15 +13,23 @@ export default function Profile() {
   useEffect(() => {
     (async () => {
       try {
-        // const data = await api.get(endpoints.auth.profile);
-        const data = { id: 'me', name: 'Ocean User', email: 'ocean@example.com' };
-        setProfile(data);
+        if (token) {
+          const data = await api.get(endpoints.auth.profile);
+          setProfile({
+            id: data.id,
+            name: data.full_name || '',
+            email: data.email
+          });
+        } else {
+          setProfile({ id: 'guest', name: 'Guest', email: 'guest@example.com' });
+        }
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(e);
+        setProfile({ id: 'guest', name: 'Guest', email: 'guest@example.com' });
       }
     })();
-  }, [api]);
+  }, [api, token]);
 
   if (!profile) return <div className="container" style={{ padding: 24 }}>Loading profile...</div>;
 
@@ -30,7 +38,7 @@ export default function Profile() {
       <h2 style={{ marginTop: 0 }}>Your Profile</h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
         <div className="badge">Name</div>
-        <div>{profile.name}</div>
+        <div>{profile.name || '—'}</div>
         <div className="badge">Email</div>
         <div>{profile.email}</div>
       </div>

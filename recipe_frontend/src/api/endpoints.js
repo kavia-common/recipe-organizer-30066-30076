@@ -6,10 +6,10 @@ export const endpoints = {
   },
   recipes: {
     base: '/recipes',
-    byId: (id) => `/recipes/${id}`,
-    search: '/recipes/search',
-    my: '/recipes/mine'
+    byId: (id) => `/recipes/${id}`
   },
+  // Backend exposes search at top-level "/search"
+  search: '/search',
   health: '/'
 };
 

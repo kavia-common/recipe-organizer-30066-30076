@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 // PUBLIC_INTERFACE
 export function useRecipes() {
-  /** Fetches recipe list (mock for now) and exposes filters */
+  /** Fetches recipe list (prefers backend /search, falls back to mock) and exposes filters */
   const { token } = useAuth();
   const api = useMemo(() => createApiWithToken(() => token), [token]);
 
@@ -20,8 +20,23 @@ export function useRecipes() {
       setLoading(true);
       setError('');
       try {
-        // const data = await api.get(endpoints.recipes.base, { query: filters });
-        // Placeholder mock:
+        // Map UI filters to backend query params
+        const query = {};
+        if (filters?.tag) query.q = String(filters.tag);
+        // Note: backend expects category_id (numeric) and tag_ids (list[int]); our simple UI uses names
+        // so we only pass q for now.
+        const res = await api.get(endpoints.search, { query });
+        const items = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : []);
+        const normalized = items.map(r => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          category: r?.category?.name || '',
+          duration_minutes: 0
+        }));
+        if (mounted) setRecipes(normalized);
+      } catch (e) {
+        // Fallback to mock data when backend not reachable or errors
         const data = [
           { id: '1', title: 'Ocean Salad', description: 'Fresh greens with citrus dressing', category: 'Lunch', duration_minutes: 10 },
           { id: '2', title: 'Amber Curry', description: 'Warm, spicy, and comforting', category: 'Dinner', duration_minutes: 45 },
@@ -34,9 +49,8 @@ export function useRecipes() {
           }
           return true;
         });
+        if (mounted) setError(e?.message || 'Failed to load from API, showing mock data');
         if (mounted) setRecipes(data);
-      } catch (e) {
-        if (mounted) setError(e?.message || 'Failed to load');
       } finally {
         if (mounted) setLoading(false);
       }
